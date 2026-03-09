@@ -1,0 +1,114 @@
+.audit-result-card {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  padding: 16px;
+  margin-bottom: 12px;
+  border-left: 4px solid #f59e0b;
+}
+
+.audit-result-card .risk-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.audit-result-card .risk-low {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.audit-result-card .risk-mid {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.audit-result-card .risk-high {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.audit-result-card .risk-element {
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 12px;
+}
+
+.audit-result-card .meta-section {
+  background: #f9fafb;
+  padding: 10px 12px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.audit-result-card .meta-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.audit-result-card .meta-row:last-child {
+  margin-bottom: 0;
+}
+
+.audit-result-card .meta-label {
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+.audit-result-card .meta-value {
+  color: #374151;
+  word-break: break-all;
+}
+
+.audit-result-card .conclusion-section {
+  margin-top: 12px;
+}
+
+.audit-result-card .conclusion-label {
+  font-weight: 600;
+  color: #374151;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.audit-result-card .conclusion-content {
+  font-size: 14px;
+  line-height: 1.7;
+  color: #4b5563;
+  margin-bottom: 10px;
+}
+
+.audit-result-card .conclusion-content:last-child {
+  margin-bottom: 0;
+}
+
+.audit-result-card .conclusion-content.highlight-red {
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.audit-result-card .conclusion-content.reason {
+  color: #4b5563;
+  padding-left: 12px;
+  border-left: 2px solid #e5e7eb;
+}
+
+.audit-result-card .ref-link {
+  background: none;
+  border: none;
+  color: #2563eb;
+  cursor: pointer;
+  padding: 0 2px;
+  font-size: inherit;
+  text-decoration: underline;
+  font-family: inherit;
+}
+
+.audit-result-card .ref-link:hover {
+  color: #1d4ed8;
+}

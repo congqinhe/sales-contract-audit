@@ -1,0 +1,32 @@
+.audit-result-panel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: #f3f4f6;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.audit-result-panel .panel-header {
+  padding: 8px 12px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #111827;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.audit-result-panel .records {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px;
+  min-height: 0;
+}
+
+.audit-result-panel .empty-state {
+  color: #9ca3af;
+  text-align: center;
+  padding: 48px 24px;
+}
