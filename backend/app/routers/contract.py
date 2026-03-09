@@ -4,8 +4,9 @@ from typing import Optional
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
+from app.config import settings
 from app.models.schemas import AuditRecord, AuditResponse
-from app.services.agent import run_audit
+from app.services.audit_sliced import run_audit_sliced
 from app.services.pdf_parser import parse_pdf
 from app.services.text_parser import parse_text, text_to_paragraphs
 
@@ -109,8 +110,13 @@ async def audit_contract(
     try:
         records: list[AuditRecord]
         raw: str
-        records, raw = run_audit(
-            contract_text, risk_element, explanation, risk_exclusion
+        records, raw = run_audit_sliced(
+            contract_text,
+            risk_element,
+            explanation,
+            risk_exclusion,
+            chunk_size=settings.audit_chunk_size,
+            overlap=settings.audit_chunk_overlap,
         )
         return AuditResponse(records=records, raw_output=raw)
     except Exception as e:
