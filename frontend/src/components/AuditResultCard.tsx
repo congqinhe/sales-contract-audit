@@ -54,7 +54,7 @@ export function AuditResultCard({ record, onRefClick }: Props) {
     record.paragraph_start === "未找到" || record.original_text === "未找到相关条款";
 
   return (
-    <div className="audit-result-card">
+    <div className={`audit-result-card card-${riskLevelClass(record.risk_level)}`}>
       <div className={`risk-badge ${riskLevelClass(record.risk_level)}`}>
         {record.risk_level || "中风险"}
       </div>

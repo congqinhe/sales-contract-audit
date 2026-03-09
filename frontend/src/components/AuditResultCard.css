@@ -4,7 +4,19 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   padding: 16px;
   margin-bottom: 12px;
-  border-left: 4px solid #f59e0b;
+  border-left: 4px solid transparent;
+}
+
+.audit-result-card.card-risk-low {
+  border-left-color: #10b981;
+}
+
+.audit-result-card.card-risk-mid {
+  border-left-color: #f59e0b;
+}
+
+.audit-result-card.card-risk-high {
+  border-left-color: #ef4444;
 }
 
 .audit-result-card .risk-badge {

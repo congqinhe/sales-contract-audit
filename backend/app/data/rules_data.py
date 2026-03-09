@@ -184,8 +184,8 @@ BUILTIN_RULES: list[RuleCreate] = [
     ),
     RuleCreate(
         risk_element="法务部 - 风险转移约定超规",
-        explanation="合同约定产品验收之前的风险承担方非卖方，触发风险",
-        risk_exclusion="合同约定产品验收之前的风险由卖方承担",
+        explanation="超出标准：完成产品交货后，产品所有损害、丢失、毁损的风险转移至买方。触发风险",
+        risk_exclusion="",
     ),
     RuleCreate(
         risk_element="质量管理部 - 质量责任范围扩大化",

@@ -19,7 +19,7 @@ def _extract_refs(text: str) -> list[dict]:
 def _infer_risk_level(conclusion: str) -> str:
     """从结论文本推断风险等级"""
     c = conclusion.lower()
-    if "无风险" in c or "风险较低" in c or "无此项约定" in c:
+    if "无风险" in c or "风险较低" in c or "已规避" in c or "无此项约定" in c:
         return "低风险"
     if "高风险" in c or "存在重大风险" in c:
         return "高风险"
