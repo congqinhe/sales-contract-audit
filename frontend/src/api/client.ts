@@ -1,4 +1,4 @@
-import type { AuditRecord, AuditResponse, FullAuditResponse, Rule } from "../types";
+import type { AuditResponse, FullAuditResponse, Rule } from "../types";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "";
 
