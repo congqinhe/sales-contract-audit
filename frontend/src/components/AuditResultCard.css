@@ -7,48 +7,96 @@
   border-left: 4px solid transparent;
 }
 
-.audit-result-card.card-risk-low {
+.audit-result-card.card-risk-safe {
   border-left-color: #10b981;
 }
 
-.audit-result-card.card-risk-mid {
+.audit-result-card.card-risk-review {
   border-left-color: #f59e0b;
 }
 
-.audit-result-card.card-risk-high {
+.audit-result-card.card-risk-danger {
   border-left-color: #ef4444;
+}
+
+.audit-result-card.card-risk-na {
+  border-left-color: #9ca3af;
+}
+
+/* top row: badges */
+.audit-result-card .card-top-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
 }
 
 .audit-result-card .risk-badge {
   display: inline-block;
-  padding: 4px 10px;
+  padding: 3px 10px;
   border-radius: 4px;
   font-size: 12px;
   font-weight: 500;
-  margin-bottom: 8px;
 }
 
-.audit-result-card .risk-low {
+.audit-result-card .risk-safe {
   background: #d1fae5;
   color: #065f46;
 }
 
-.audit-result-card .risk-mid {
-  background: #ffedd5;
-  color: #9a3412;
+.audit-result-card .risk-review {
+  background: #fef3c7;
+  color: #92400e;
 }
 
-.audit-result-card .risk-high {
+.audit-result-card .risk-danger {
   background: #fee2e2;
   color: #991b1b;
 }
 
-.audit-result-card .risk-element {
+.audit-result-card .risk-na {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.audit-result-card .type-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.audit-result-card .type-identify {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.audit-result-card .type-judge {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.audit-result-card .type-verify {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.audit-result-card .rule-id-badge {
+  font-size: 11px;
+  color: #9ca3af;
+  font-family: monospace;
+}
+
+.audit-result-card .review-point {
   font-weight: 600;
   color: #1f2937;
   margin-bottom: 12px;
+  font-size: 14px;
 }
 
+/* meta section */
 .audit-result-card .meta-section {
   background: #f9fafb;
   padding: 10px 12px;
@@ -77,39 +125,69 @@
   word-break: break-all;
 }
 
-.audit-result-card .conclusion-section {
-  margin-top: 12px;
+/* extracted info */
+.audit-result-card .extracted-section {
+  margin-bottom: 12px;
 }
 
-.audit-result-card .conclusion-label {
+.audit-result-card .section-label {
   font-weight: 600;
   color: #374151;
   font-size: 13px;
   margin-bottom: 4px;
 }
 
+.audit-result-card .extracted-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  background: #f0fdf4;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.audit-result-card .extracted-item {
+  display: flex;
+  gap: 6px;
+}
+
+.audit-result-card .extracted-key {
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+.audit-result-card .extracted-val {
+  color: #1f2937;
+}
+
+/* conclusion */
+.audit-result-card .conclusion-section {
+  margin-bottom: 12px;
+}
+
 .audit-result-card .conclusion-content {
   font-size: 14px;
   line-height: 1.7;
-  color: #4b5563;
-  margin-bottom: 10px;
-}
-
-.audit-result-card .conclusion-content:last-child {
-  margin-bottom: 0;
-}
-
-.audit-result-card .conclusion-content.highlight-red {
-  color: #dc2626;
-  font-weight: 500;
-}
-
-.audit-result-card .conclusion-content.reason {
   color: #4b5563;
   padding-left: 12px;
   border-left: 2px solid #e5e7eb;
 }
 
+/* suggestion */
+.audit-result-card .suggestion-section {
+  margin-bottom: 0;
+}
+
+.audit-result-card .suggestion-content {
+  font-size: 13px;
+  color: #059669;
+  padding: 6px 10px;
+  background: #ecfdf5;
+  border-radius: 4px;
+}
+
+/* ref links */
 .audit-result-card .ref-link {
   background: none;
   border: none;

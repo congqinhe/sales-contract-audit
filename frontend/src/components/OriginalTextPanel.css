@@ -9,6 +9,9 @@
 }
 
 .original-text-panel .panel-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   padding: 8px 12px;
   font-size: 14px;
   font-weight: 600;
@@ -16,6 +19,25 @@
   background: #fff;
   border-bottom: 1px solid #e5e7eb;
   flex-shrink: 0;
+}
+
+.original-text-panel .coverage-stats {
+  font-size: 12px;
+  font-weight: 400;
+  color: #6b7280;
+  margin-left: auto;
+}
+
+.original-text-panel .coverage-covered {
+  color: #059669;
+}
+
+.original-text-panel .coverage-sep {
+  margin: 0 2px;
+}
+
+.original-text-panel .coverage-uncovered {
+  color: #d97706;
 }
 
 .original-text-panel .search-bar {
@@ -91,9 +113,14 @@
   background: #fff;
 }
 
+.original-text-panel .para-covered {
+  background: #f0fdf4;
+  border-left: 2px solid #bbf7d0;
+}
+
 .original-text-panel .para-highlight {
   background: #fef3c7 !important;
-  border-left: 3px solid #f59e0b;
+  border-left: 3px solid #f59e0b !important;
 }
 
 .original-text-panel .para-id {

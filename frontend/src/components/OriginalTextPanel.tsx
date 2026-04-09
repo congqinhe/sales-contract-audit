@@ -5,6 +5,7 @@ import "./OriginalTextPanel.css";
 interface Props {
   paragraphs: Paragraph[];
   highlightRange: { start: number; end: number } | null;
+  coveredParaIds?: Set<number>;
 }
 
 function escapeRegex(str: string): string {
@@ -21,7 +22,7 @@ function highlightText(text: string, keyword: string): React.ReactNode {
   );
 }
 
-export function OriginalTextPanel({ paragraphs, highlightRange }: Props) {
+export function OriginalTextPanel({ paragraphs, highlightRange, coveredParaIds }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
@@ -65,9 +66,25 @@ export function OriginalTextPanel({ paragraphs, highlightRange }: Props) {
     setCurrentMatchIndex((i) => (i >= totalMatches - 1 ? 0 : i + 1));
   };
 
+  const coveredCount = coveredParaIds?.size ?? 0;
+  const totalCount = paragraphs.length;
+  const uncoveredCount = totalCount - coveredCount;
+
   return (
     <div className="original-text-panel" ref={containerRef}>
-      <div className="panel-header">合同原文</div>
+      <div className="panel-header">
+        <span>合同原文</span>
+        {coveredCount > 0 && (
+          <span className="coverage-stats">
+            <span className="coverage-covered">已覆盖 {coveredCount}</span>
+            <span className="coverage-sep">/</span>
+            <span className="coverage-total">{totalCount} 段</span>
+            {uncoveredCount > 0 && (
+              <span className="coverage-uncovered">（{uncoveredCount} 段待人工关注）</span>
+            )}
+          </span>
+        )}
+      </div>
       <div className="search-bar">
         <input
           type="text"
@@ -101,11 +118,12 @@ export function OriginalTextPanel({ paragraphs, highlightRange }: Props) {
             highlightRange &&
             p.id >= highlightRange.start &&
             p.id <= highlightRange.end;
+          const isCovered = coveredParaIds?.has(p.id) ?? false;
           return (
             <div
               key={p.id}
               data-para-id={p.id}
-              className={`para ${inRange ? "para-highlight" : ""}`}
+              className={`para${inRange ? " para-highlight" : ""}${isCovered && !inRange ? " para-covered" : ""}`}
             >
               <span className="para-id">{p.id}</span>
               <span className="para-text">

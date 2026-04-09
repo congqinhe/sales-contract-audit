@@ -1,41 +1,53 @@
-import { useState, useCallback, useEffect } from "react";
-import { parseContract, auditContract, listRules, inspectContract } from "../api/client";
+import { useState, useCallback, useEffect, useMemo } from "react";
+import {
+  parseContract,
+  auditByModule,
+  auditFull,
+  listModules,
+  listRulesByModule,
+  inspectContract,
+} from "../api/client";
 import type { Paragraph, Rule, AuditRecord } from "../types";
 import { OriginalTextPanel } from "./OriginalTextPanel";
 import { AuditResultPanel } from "./AuditResultPanel";
 import "./ContractReviewTool.css";
 
+const COMPANIES = ["通用", "低压", "诺雅克", "输配电"];
+
 export function ContractReviewTool() {
   const [paragraphs, setParagraphs] = useState<Paragraph[]>([]);
   const [fullText, setFullText] = useState("");
-  const [rules, setRules] = useState<Rule[]>([]);
-  const [selectedRule, setSelectedRule] = useState<Rule | null>(null);
+
+  const [modules, setModules] = useState<string[]>([]);
+  const [selectedModule, setSelectedModule] = useState<string>("");
+  const [company, setCompany] = useState("通用");
+  const [moduleRules, setModuleRules] = useState<Record<string, Rule[]>>({});
+
   const [records, setRecords] = useState<AuditRecord[]>([]);
   const [highlightRange, setHighlightRange] = useState<{
     start: number;
     end: number;
   } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [auditProgress, setAuditProgress] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [inputText, setInputText] = useState("");
   const [inputSource, setInputSource] = useState<"paste" | "file">("paste");
 
   useEffect(() => {
-    listRules()
-      .then(({ items }) => {
-        // #region agent log
-        fetch('http://127.0.0.1:7390/ingest/f7289e82-292a-4746-8ff8-522eda614c1c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'be0578'},body:JSON.stringify({sessionId:'be0578',location:'ContractReviewTool.tsx:listRules',message:'listRules success',data:{itemCount:items?.length},hypothesisId:'H1',timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
-        setRules(items);
-        if (items.length > 0) setSelectedRule((prev) => prev ?? items[0]);
+    listModules()
+      .then(({ modules: mods }) => {
+        setModules(mods);
+        if (mods.length > 0) setSelectedModule(mods[0]);
       })
-      .catch((e) => {
-        // #region agent log
-        fetch('http://127.0.0.1:7390/ingest/f7289e82-292a-4746-8ff8-522eda614c1c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'be0578'},body:JSON.stringify({sessionId:'be0578',location:'ContractReviewTool.tsx:listRules-catch',message:'listRules failed',data:{err:String(e)},hypothesisId:'H1',timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
-        setError(String(e));
-      });
+      .catch((e) => setError(String(e)));
   }, []);
+
+  useEffect(() => {
+    listRulesByModule(company !== "通用" ? company : undefined)
+      .then(({ modules: grouped }) => setModuleRules(grouped))
+      .catch(() => {});
+  }, [company]);
 
   const handleParsePaste = useCallback(async () => {
     if (!inputText.trim()) {
@@ -46,16 +58,10 @@ export function ContractReviewTool() {
     setLoading(true);
     try {
       const res = await parseContract(inputText.trim());
-      // #region agent log
-      fetch('http://127.0.0.1:7390/ingest/f7289e82-292a-4746-8ff8-522eda614c1c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'be0578'},body:JSON.stringify({sessionId:'be0578',location:'ContractReviewTool.tsx:parsePaste',message:'parse success',data:{paragraphCount:res?.paragraphs?.length,hasFullText:!!res?.full_text},hypothesisId:'H2',timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       setParagraphs(res.paragraphs || []);
       setFullText(res.full_text || "");
       setRecords([]);
     } catch (err) {
-      // #region agent log
-      fetch('http://127.0.0.1:7390/ingest/f7289e82-292a-4746-8ff8-522eda614c1c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'be0578'},body:JSON.stringify({sessionId:'be0578',location:'ContractReviewTool.tsx:parsePaste-catch',message:'parse failed',data:{err:String(err)},hypothesisId:'H2',timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       setError(String(err));
     } finally {
       setLoading(false);
@@ -68,18 +74,12 @@ export function ContractReviewTool() {
       if (!file) return;
       setError(null);
       setLoading(true);
-    try {
-      const res = await parseContract(undefined, file);
-      // #region agent log
-      fetch('http://127.0.0.1:7390/ingest/f7289e82-292a-4746-8ff8-522eda614c1c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'be0578'},body:JSON.stringify({sessionId:'be0578',location:'ContractReviewTool.tsx:parseFile',message:'parse file success',data:{paragraphCount:res?.paragraphs?.length},hypothesisId:'H2',timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
+      try {
+        const res = await parseContract(undefined, file);
         setParagraphs(res.paragraphs || []);
         setFullText(res.full_text || "");
         setRecords([]);
       } catch (err) {
-        // #region agent log
-        fetch('http://127.0.0.1:7390/ingest/f7289e82-292a-4746-8ff8-522eda614c1c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'be0578'},body:JSON.stringify({sessionId:'be0578',location:'ContractReviewTool.tsx:parseFile-catch',message:'parse file failed',data:{err:String(err)},hypothesisId:'H2',timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         setError(String(err));
       } finally {
         setLoading(false);
@@ -89,67 +89,120 @@ export function ContractReviewTool() {
     []
   );
 
-  const handleAudit = useCallback(async () => {
-    if (!fullText || !selectedRule) {
-      setError("请先录入合同文本并选择风险规则");
+  const handleAuditModule = useCallback(async () => {
+    if (!fullText || !selectedModule) {
+      setError("请先录入合同文本并选择模块");
       return;
     }
     setError(null);
     setLoading(true);
+    setAuditProgress(`正在审核【${selectedModule}】…`);
     try {
-      const res = await auditContract(
+      const res = await auditByModule(
         fullText,
-        selectedRule.risk_element,
-        selectedRule.explanation,
-        selectedRule.risk_exclusion || ""
+        selectedModule,
+        company !== "通用" ? company : undefined
       );
-      // #region agent log
-      fetch('http://127.0.0.1:7390/ingest/f7289e82-292a-4746-8ff8-522eda614c1c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'be0578'},body:JSON.stringify({sessionId:'be0578',location:'ContractReviewTool.tsx:audit',message:'audit success',data:{recordCount:res?.records?.length},hypothesisId:'H3',timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       setRecords(res.records);
     } catch (err) {
-      // #region agent log
-      fetch('http://127.0.0.1:7390/ingest/f7289e82-292a-4746-8ff8-522eda614c1c',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'be0578'},body:JSON.stringify({sessionId:'be0578',location:'ContractReviewTool.tsx:audit-catch',message:'audit failed',data:{err:String(err)},hypothesisId:'H3',timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       setError(String(err));
     } finally {
       setLoading(false);
+      setAuditProgress("");
     }
-  }, [fullText, selectedRule]);
+  }, [fullText, selectedModule, company]);
+
+  const handleAuditFull = useCallback(async () => {
+    if (!fullText) {
+      setError("请先录入合同文本");
+      return;
+    }
+    setError(null);
+    setLoading(true);
+    setAuditProgress("正在全量审核（所有模块并行）…");
+    try {
+      const res = await auditFull(
+        fullText,
+        company !== "通用" ? company : undefined
+      );
+      const allRecords: AuditRecord[] = [];
+      for (const moduleName of modules) {
+        const moduleRecs = res.modules[moduleName];
+        if (moduleRecs) allRecords.push(...moduleRecs);
+      }
+      setRecords(allRecords);
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setLoading(false);
+      setAuditProgress("");
+    }
+  }, [fullText, company, modules]);
 
   const handleRefClick = useCallback((start: number, end: number) => {
     setHighlightRange({ start, end });
     setTimeout(() => setHighlightRange(null), 3000);
   }, []);
 
+  const coveredParaIds = useMemo(() => {
+    const ids = new Set<number>();
+    for (const r of records) {
+      const s = typeof r.paragraph_start === "number" ? r.paragraph_start : NaN;
+      const e = typeof r.paragraph_end === "number" ? r.paragraph_end : NaN;
+      if (!isNaN(s) && !isNaN(e)) {
+        for (let i = s; i <= e; i++) ids.add(i);
+      }
+      for (const ref of r.refs) {
+        for (let i = ref.start; i <= ref.end; i++) ids.add(i);
+      }
+    }
+    return ids;
+  }, [records]);
+
   const inputCollapsed = paragraphs.length > 0;
+  const currentModuleRules = moduleRules[selectedModule] || [];
 
   return (
     <div className="contract-review-tool">
       <header className="tool-header">
-        <h1>合同风险审核</h1>
+        <h1>合同智能评审</h1>
         <div className="tool-actions">
           <select
-            className="rule-select"
-            value={selectedRule?.id ?? ""}
-            onChange={(e) => {
-              const r = rules.find((x) => x.id === e.target.value);
-              setSelectedRule(r ?? null);
-            }}
+            className="company-select"
+            value={company}
+            onChange={(e) => setCompany(e.target.value)}
           >
-            <option value="">选择风险规则</option>
-            {rules.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.risk_element}
+            {COMPANIES.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+          <select
+            className="module-select"
+            value={selectedModule}
+            onChange={(e) => setSelectedModule(e.target.value)}
+          >
+            <option value="">选择评审模块</option>
+            {modules.map((m) => (
+              <option key={m} value={m}>
+                {m}（{(moduleRules[m] || []).length}条）
               </option>
             ))}
           </select>
           <button
             className="btn btn-primary"
-            onClick={handleAudit}
-            disabled={loading || !fullText || !selectedRule}
+            onClick={handleAuditModule}
+            disabled={loading || !fullText || !selectedModule}
           >
-            {loading ? "审核中…" : "执行审核"}
+            {loading ? "审核中…" : "模块审核"}
+          </button>
+          <button
+            className="btn btn-full-audit"
+            onClick={handleAuditFull}
+            disabled={loading || !fullText}
+          >
+            {loading ? "审核中…" : "全量审核"}
           </button>
         </div>
       </header>
@@ -176,7 +229,9 @@ export function ContractReviewTool() {
             <div className="paste-area">
               <textarea
                 className="contract-textarea"
-                placeholder="请粘贴合同文本，格式示例：&#10;&#10;<!-- 1 --> 产品采购合同（一体机）&#10;<!-- 2 --> 合同编号：xxx&#10;<!-- 3 --> 采购方（以下简称需方）：..."
+                placeholder={
+                  "请粘贴合同文本，格式示例：\n\n<!-- 1 --> 产品采购合同（一体机）\n<!-- 2 --> 合同编号：xxx\n<!-- 3 --> 采购方（以下简称需方）：..."
+                }
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 rows={4}
@@ -193,23 +248,30 @@ export function ContractReviewTool() {
           ) : (
             <div className="file-area">
               <label className="btn btn-upload">
-                选择 TXT 或 PDF 文件
+                选择 TXT 文件
                 <input
                   id="file-input"
                   type="file"
-                  accept=".txt,.pdf"
+                  accept=".txt"
                   onChange={handleParseFile}
                   disabled={loading}
                   hidden
                 />
               </label>
-              <span className="file-hint">支持 .txt（需含 {'<!-- N -->'} 格式）或 .pdf（自动解析）</span>
+              <span className="file-hint">
+                支持 .txt 文件（需含 {"<!-- N -->"} 段落编号格式）
+              </span>
             </div>
           )}
         </div>
       ) : (
         <div className="loaded-info">
           已加载 {paragraphs.length} 个段落
+          {selectedModule && currentModuleRules.length > 0 && (
+            <span className="module-rule-count">
+              | 当前模块：{selectedModule}（{currentModuleRules.length}条规则）
+            </span>
+          )}
           <button
             type="button"
             className="btn-inspect"
@@ -248,11 +310,13 @@ export function ContractReviewTool() {
       )}
 
       {error && <div className="error-banner">{error}</div>}
+      {auditProgress && <div className="progress-banner">{auditProgress}</div>}
 
       <div className="dual-panel">
         <OriginalTextPanel
           paragraphs={paragraphs}
           highlightRange={highlightRange}
+          coveredParaIds={coveredParaIds}
         />
         <AuditResultPanel records={records} onRefClick={handleRefClick} />
       </div>

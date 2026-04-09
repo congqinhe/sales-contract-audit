@@ -1,14 +1,14 @@
-"""解析 Agent 输出格式：风险要素|段落编号起始|段落编号结尾|原文文本|风险判断结论及原因"""
+"""解析 Agent 输出 — 方案B：JSON 格式解析"""
+import json
 import re
-from typing import Optional
+from typing import Any
 
 from app.models.schemas import AuditRecord
 
 
 def _extract_refs(text: str) -> list[dict]:
-    """从结论文本中提取 {{id:X-Y}} 或 {{id:X}} 引用"""
+    """从文本中提取 {{id:X-Y}} 或 {{id:X}} 段落引用"""
     refs = []
-    # 匹配 {{id:46-51}} 或 {{id:46}}
     for m in re.finditer(r"\{\{id:(\d+)(?:-(\d+))?\}\}", text):
         start = int(m.group(1))
         end = int(m.group(2)) if m.group(2) else start
@@ -16,77 +16,120 @@ def _extract_refs(text: str) -> list[dict]:
     return refs
 
 
-def _infer_risk_level(conclusion: str) -> str:
-    """从结论文本推断风险等级"""
-    c = conclusion.lower()
-    if "无风险" in c or "风险较低" in c or "已规避" in c or "无此项约定" in c:
-        return "低风险"
-    if "高风险" in c or "存在重大风险" in c:
-        return "高风险"
-    return "中风险"
+def _normalize_risk_level(raw: str) -> str:
+    """将 LLM 可能输出的各种风险等级表述规范化"""
+    r = raw.strip().lower()
+    if r in ("risk", "有风险", "存在风险", "高风险", "重大风险"):
+        return "risk"
+    if r in ("no_risk", "无风险", "已规避", "低风险", "风险较低"):
+        return "no_risk"
+    if r in ("needs_manual_review", "需人工核验", "待确认", "需确认"):
+        return "needs_manual_review"
+    if r in ("not_applicable", "不适用"):
+        return "not_applicable"
+    if "风险" in r and ("无" in r or "低" in r or "规避" in r):
+        return "no_risk"
+    if "风险" in r:
+        return "risk"
+    if "人工" in r or "核验" in r or "确认" in r:
+        return "needs_manual_review"
+    return "risk"
 
 
-def _is_valid_para_id(s: str) -> bool:
-    """段落编号是否为有效格式：纯数字或"未找到" """
-    if s == "未找到":
-        return True
+def _strip_json_fences(raw: str) -> str:
+    """移除 LLM 输出中可能包裹的 markdown 代码块标记"""
+    text = raw.strip()
+    if text.startswith("```"):
+        first_newline = text.find("\n")
+        if first_newline != -1:
+            text = text[first_newline + 1:]
+        if text.endswith("```"):
+            text = text[:-3]
+    return text.strip()
+
+
+def _safe_parse_json(raw: str) -> list[dict[str, Any]]:
+    """尝试从 LLM 输出中解析 JSON 数组，带容错"""
+    text = _strip_json_fences(raw)
+
     try:
-        n = int(s)
-        return n >= 1
-    except (ValueError, TypeError):
-        return False
+        data = json.loads(text)
+        if isinstance(data, list):
+            return data
+        if isinstance(data, dict):
+            return [data]
+    except json.JSONDecodeError:
+        pass
 
-
-def parse_agent_output(raw: str) -> list[AuditRecord]:
-    """
-    解析 Agent 输出，每行格式：
-    风险要素|段落编号起始|段落编号结尾|原文文本|风险判断结论及原因
-    """
-    records = []
-    for line in raw.strip().split("\n"):
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-
-        parts = line.split("|")
-        if len(parts) < 5:
-            continue
-
-        risk_element = parts[0].strip()
-        para_start = parts[1].strip()
-        para_end = parts[2].strip()
-        original_text = parts[3].strip()
-        conclusion_and_reason = parts[4].strip()
-
-        # 段落编号校验：仅接受纯数字或"未找到"，否则跳过该条（避免表格等误解析）
-        if not _is_valid_para_id(para_start) or not _is_valid_para_id(para_end):
-            continue
-
-        # 解析段落编号
+    bracket_match = re.search(r"\[.*\]", text, re.DOTALL)
+    if bracket_match:
         try:
-            ps = int(para_start) if para_start != "未找到" else para_start
-            pe = int(para_end) if para_end != "未找到" else para_end
-        except ValueError:
+            data = json.loads(bracket_match.group())
+            if isinstance(data, list):
+                return data
+        except json.JSONDecodeError:
+            pass
+
+    return []
+
+
+def parse_module_output(raw: str, module: str = "") -> list[AuditRecord]:
+    """
+    解析模块级 Agent 输出（JSON 数组格式），返回 AuditRecord 列表。
+    """
+    items = _safe_parse_json(raw)
+    records: list[AuditRecord] = []
+
+    for item in items:
+        if not isinstance(item, dict):
             continue
 
-        # 原文过短且明显像表格单元格（如单个数字、单字段）时跳过
-        if len(original_text) < 8 and original_text != "未找到相关条款":
-            # 纯数字或纯单字段（无标点、无空格）视为可疑
-            if original_text.isdigit() or (len(original_text) <= 4 and " " not in original_text and "，" not in original_text):
-                continue
+        rule_id = str(item.get("rule_id", ""))
+        review_point = str(item.get("review_point", ""))
+        review_type = str(item.get("review_type", "judge"))
 
-        refs = _extract_refs(conclusion_and_reason)
-        risk_level = _infer_risk_level(conclusion_and_reason)
+        para_start = item.get("paragraph_start", "未找到")
+        para_end = item.get("paragraph_end", "未找到")
+
+        if isinstance(para_start, str) and para_start not in ("未找到",):
+            try:
+                para_start = int(para_start)
+            except ValueError:
+                para_start = "未找到"
+        if isinstance(para_end, str) and para_end not in ("未找到",):
+            try:
+                para_end = int(para_end)
+            except ValueError:
+                para_end = "未找到"
+
+        contract_quote = str(item.get("contract_quote", "未找到相关条款"))
+        extracted_info = item.get("extracted_info", {})
+        if not isinstance(extracted_info, dict):
+            extracted_info = {}
+
+        risk_level_raw = str(item.get("risk_level", "needs_manual_review"))
+        risk_level = _normalize_risk_level(risk_level_raw)
+
+        risk_description = str(item.get("risk_description", ""))
+        suggestion = str(item.get("suggestion", ""))
+
+        refs = _extract_refs(risk_description)
 
         records.append(
             AuditRecord(
-                risk_element=risk_element,
-                paragraph_start=ps,
-                paragraph_end=pe,
-                original_text=original_text,
-                conclusion_and_reason=conclusion_and_reason,
+                rule_id=rule_id,
+                module=module,
+                review_point=review_point,
+                review_type=review_type,
+                paragraph_start=para_start,
+                paragraph_end=para_end,
+                contract_quote=contract_quote,
+                extracted_info=extracted_info,
                 risk_level=risk_level,
+                risk_description=risk_description,
+                suggestion=suggestion,
                 refs=refs,
             )
         )
+
     return records

@@ -61,12 +61,40 @@
   background: #1d4ed8;
 }
 
-.contract-review-tool .rule-select {
+.contract-review-tool .btn-full-audit {
+  background: #059669;
+  color: #fff;
+  border-color: #059669;
+}
+
+.contract-review-tool .btn-full-audit:hover:not(:disabled) {
+  background: #047857;
+}
+
+.contract-review-tool .module-select,
+.contract-review-tool .company-select {
   padding: 6px 10px;
   border-radius: 6px;
   border: 1px solid #d1d5db;
   font-size: 13px;
+  min-width: 120px;
+}
+
+.contract-review-tool .module-select {
   min-width: 180px;
+}
+
+.contract-review-tool .module-rule-count {
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+.contract-review-tool .progress-banner {
+  padding: 6px 16px;
+  background: #dbeafe;
+  color: #1e40af;
+  font-size: 13px;
+  flex-shrink: 0;
 }
 
 .contract-review-tool .input-section {

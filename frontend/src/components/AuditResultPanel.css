@@ -9,6 +9,9 @@
 }
 
 .audit-result-panel .panel-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   padding: 8px 12px;
   font-weight: 600;
   font-size: 14px;
@@ -16,6 +19,34 @@
   background: #fff;
   border-bottom: 1px solid #e5e7eb;
   flex-shrink: 0;
+}
+
+.audit-result-panel .summary-badges {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.audit-result-panel .badge {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.audit-result-panel .badge-risk {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.audit-result-panel .badge-review {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.audit-result-panel .badge-ok {
+  background: #d1fae5;
+  color: #065f46;
 }
 
 .audit-result-panel .records {
@@ -29,4 +60,17 @@
   color: #9ca3af;
   text-align: center;
   padding: 48px 24px;
+}
+
+.audit-result-panel .module-group {
+  margin-bottom: 16px;
+}
+
+.audit-result-panel .module-group-header {
+  font-weight: 600;
+  font-size: 13px;
+  color: #6b7280;
+  padding: 6px 0 4px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 8px;
 }

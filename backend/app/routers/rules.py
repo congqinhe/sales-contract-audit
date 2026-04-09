@@ -1,53 +1,36 @@
-"""规则管理 API（内置规则，不可编辑）"""
-import uuid
+"""规则管理 API — 方案B：按模块组织的结构化规则"""
+from fastapi import APIRouter
 
-from fastapi import APIRouter, HTTPException
-
-from app.data.rules_data import BUILTIN_RULES
-from app.models.schemas import Rule, RuleCreate
+from app.data.rules_data import BUILTIN_RULES, MODULES, get_rules_by_module
 
 router = APIRouter(prefix="/api/rules", tags=["rules"])
-
-# 内置规则，不可编辑
-_rules: dict[str, Rule] = {}
-
-
-def _init_defaults():
-    for r in BUILTIN_RULES:
-        rid = str(uuid.uuid4())
-        _rules[rid] = Rule(id=rid, **r.model_dump())
-
-
-_init_defaults()
 
 
 @router.get("")
 def list_rules():
-    """获取所有规则"""
-    return {"items": list(_rules.values())}
+    """获取所有规则（扁平列表）"""
+    return {"items": [r.model_dump() for r in BUILTIN_RULES]}
 
 
-@router.get("/{rule_id}")
-def get_rule(rule_id: str):
-    """获取单条规则"""
-    if rule_id not in _rules:
-        raise HTTPException(status_code=404, detail="规则不存在")
-    return _rules[rule_id]
+@router.get("/modules")
+def list_modules():
+    """获取所有模块名称"""
+    return {"modules": list(MODULES)}
 
 
-@router.post("")
-def create_rule(rule: RuleCreate):
-    """内置规则，不支持创建"""
-    raise HTTPException(status_code=403, detail="内置规则，不支持创建")
+@router.get("/by-module")
+def rules_by_module(company: str = None):
+    """按模块分组返回规则"""
+    result = {}
+    for module in MODULES:
+        rules = get_rules_by_module(module, company)
+        if rules:
+            result[module] = [r.model_dump() for r in rules]
+    return {"modules": result}
 
 
-@router.put("/{rule_id}")
-def update_rule(rule_id: str, rule: RuleCreate):
-    """内置规则，不支持修改"""
-    raise HTTPException(status_code=403, detail="内置规则，不支持修改")
-
-
-@router.delete("/{rule_id}")
-def delete_rule(rule_id: str):
-    """内置规则，不支持删除"""
-    raise HTTPException(status_code=403, detail="内置规则，不支持删除")
+@router.get("/module/{module_name}")
+def get_module_rules(module_name: str, company: str = None):
+    """获取指定模块的规则"""
+    rules = get_rules_by_module(module_name, company)
+    return {"module": module_name, "rules": [r.model_dump() for r in rules]}
