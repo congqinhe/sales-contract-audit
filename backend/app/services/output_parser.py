@@ -26,6 +26,17 @@ def _infer_risk_level(conclusion: str) -> str:
     return "中风险"
 
 
+def _is_valid_para_id(s: str) -> bool:
+    """段落编号是否为有效格式：纯数字或"未找到" """
+    if s == "未找到":
+        return True
+    try:
+        n = int(s)
+        return n >= 1
+    except (ValueError, TypeError):
+        return False
+
+
 def parse_agent_output(raw: str) -> list[AuditRecord]:
     """
     解析 Agent 输出，每行格式：
@@ -47,12 +58,22 @@ def parse_agent_output(raw: str) -> list[AuditRecord]:
         original_text = parts[3].strip()
         conclusion_and_reason = parts[4].strip()
 
-        # 解析段落编号（可能为数字或"未找到"）
+        # 段落编号校验：仅接受纯数字或"未找到"，否则跳过该条（避免表格等误解析）
+        if not _is_valid_para_id(para_start) or not _is_valid_para_id(para_end):
+            continue
+
+        # 解析段落编号
         try:
             ps = int(para_start) if para_start != "未找到" else para_start
             pe = int(para_end) if para_end != "未找到" else para_end
         except ValueError:
-            ps, pe = para_start, para_end
+            continue
+
+        # 原文过短且明显像表格单元格（如单个数字、单字段）时跳过
+        if len(original_text) < 8 and original_text != "未找到相关条款":
+            # 纯数字或纯单字段（无标点、无空格）视为可疑
+            if original_text.isdigit() or (len(original_text) <= 4 and " " not in original_text and "，" not in original_text):
+                continue
 
         refs = _extract_refs(conclusion_and_reason)
         risk_level = _infer_risk_level(conclusion_and_reason)

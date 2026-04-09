@@ -7,3 +7,4 @@ __pycache__/
 backend/.env
 backend/venv/
 *.log
+.DS_Store
