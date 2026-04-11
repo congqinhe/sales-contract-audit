@@ -33,7 +33,7 @@ def text_to_paragraphs(content: str) -> dict:
 def parse_text(content: str) -> dict:
     """
     解析带 <!-- N --> 编号的合同文本，返回段落列表和全文。
-    content 可为粘贴的文本或从 TXT 文件读取的内容。
+    content 可为粘贴的文本或从 .txt / .md 文件读取的内容。
     """
     paragraphs = []
     full_lines = []
@@ -43,10 +43,12 @@ def parse_text(content: str) -> dict:
         m = re.match(r"^\s*<!--\s*(\d+)\s*-->\s*(.*)$", line)
         if m:
             pid = int(m.group(1))
+            # 仅使用标记后的正文；若本行仅有 <!-- N --> 则为空串。
+            # 勿用「整行」回退，否则会把 <!-- N --> 当成正文露出到前端。
             text = m.group(2).strip()
-            para = {"id": pid, "text": text or line.strip(), "page": 1}
+            para = {"id": pid, "text": text, "page": 1}
             paragraphs.append(para)
-            full_lines.append(f"<!-- {pid} -->{para['text']}")
+            full_lines.append(f"<!-- {pid} -->{text}")
 
     full_text = "\n".join(full_lines)
     return {"paragraphs": paragraphs, "full_text": full_text}

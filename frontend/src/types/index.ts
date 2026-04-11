@@ -16,6 +16,13 @@ export interface Rule {
   notes?: string;
 }
 
+/** 单条规则在合同中的多处证据段落（一卡多条，防漏检） */
+export interface EvidenceSpan {
+  paragraph_start: number;
+  paragraph_end: number;
+  brief?: string;
+}
+
 export interface AuditRecord {
   rule_id: string;
   module: string;
@@ -29,6 +36,7 @@ export interface AuditRecord {
   risk_description: string;
   suggestion: string;
   refs: { start: number; end: number }[];
+  evidence_spans?: EvidenceSpan[];
 }
 
 export interface AuditResponse {

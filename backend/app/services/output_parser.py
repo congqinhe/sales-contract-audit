@@ -1,9 +1,80 @@
 """解析 Agent 输出 — 方案B：JSON 格式解析"""
 import json
+import logging
 import re
-from typing import Any
+from typing import Any, Optional
 
 from app.models.schemas import AuditRecord
+
+logger = logging.getLogger(__name__)
+
+
+def _parse_span_int(val: Any) -> Optional[int]:
+    if val == "未找到" or val is None:
+        return None
+    if isinstance(val, bool):
+        return None
+    if isinstance(val, int):
+        return val if val >= 0 else None
+    try:
+        n = int(str(val).strip())
+        return n if n >= 0 else None
+    except ValueError:
+        return None
+
+
+def _normalize_evidence_spans(raw: Any) -> list[dict[str, Any]]:
+    """解析 LLM 输出的 evidence_spans，统一为 paragraph_start/end (+可选 brief)。"""
+    if not isinstance(raw, list):
+        return []
+    out: list[dict[str, Any]] = []
+    seen: set[tuple[int, int]] = set()
+    for el in raw:
+        if not isinstance(el, dict):
+            continue
+        ps = _parse_span_int(el.get("paragraph_start", el.get("start")))
+        pe = _parse_span_int(el.get("paragraph_end", el.get("end")))
+        if ps is None or pe is None:
+            continue
+        if pe < ps:
+            ps, pe = pe, ps
+        key = (ps, pe)
+        if key in seen:
+            continue
+        seen.add(key)
+        brief = str(el.get("brief", el.get("note", ""))).strip()
+        item: dict[str, Any] = {"paragraph_start": ps, "paragraph_end": pe}
+        if brief:
+            item["brief"] = brief
+        out.append(item)
+    return out
+
+
+def _refs_from_evidence_spans(spans: list[dict[str, Any]]) -> list[dict]:
+    refs: list[dict] = []
+    for s in spans:
+        ps = s.get("paragraph_start")
+        pe = s.get("paragraph_end")
+        if isinstance(ps, int) and isinstance(pe, int):
+            refs.append({"start": ps, "end": pe})
+    return refs
+
+
+def _merge_ref_dicts(*ref_lists: list[dict]) -> list[dict]:
+    seen: set[tuple[int, int]] = set()
+    merged: list[dict] = []
+    for lst in ref_lists:
+        for r in lst:
+            start = r.get("start")
+            end = r.get("end")
+            if not isinstance(start, int) or not isinstance(end, int):
+                continue
+            key = (start, end)
+            if key in seen:
+                continue
+            seen.add(key)
+            merged.append({"start": start, "end": end})
+    return merged
 
 
 def _extract_refs(text: str) -> list[dict]:
@@ -48,6 +119,32 @@ def _strip_json_fences(raw: str) -> str:
     return text.strip()
 
 
+def _repair_truncated_json(text: str) -> list[dict[str, Any]]:
+    """尝试修复被截断的 JSON 数组，抢救已完成的对象。
+
+    策略：从末尾向前找到最后一个完整的 '}' 对象边界，
+    截断后补上 ']' 再解析。
+    """
+    start = text.find("[")
+    if start == -1:
+        return []
+
+    fragment = text[start:]
+    last_brace = fragment.rfind("}")
+    if last_brace == -1:
+        return []
+
+    candidate = fragment[: last_brace + 1].rstrip().rstrip(",") + "]"
+    try:
+        data = json.loads(candidate)
+        if isinstance(data, list):
+            logger.info("截断 JSON 修复成功，抢救出 %d 条记录", len(data))
+            return data
+    except json.JSONDecodeError:
+        pass
+    return []
+
+
 def _safe_parse_json(raw: str) -> list[dict[str, Any]]:
     """尝试从 LLM 输出中解析 JSON 数组，带容错"""
     text = _strip_json_fences(raw)
@@ -70,6 +167,12 @@ def _safe_parse_json(raw: str) -> list[dict[str, Any]]:
         except json.JSONDecodeError:
             pass
 
+    repaired = _repair_truncated_json(text)
+    if repaired:
+        return repaired
+
+    if text:
+        logger.warning("JSON 解析完全失败, raw_len=%d, head=%.200s", len(text), text[:200])
     return []
 
 
@@ -106,6 +209,7 @@ def parse_module_output(raw: str, module: str = "") -> list[AuditRecord]:
         extracted_info = item.get("extracted_info", {})
         if not isinstance(extracted_info, dict):
             extracted_info = {}
+        extracted_info.pop("evidence_spans", None)
 
         risk_level_raw = str(item.get("risk_level", "needs_manual_review"))
         risk_level = _normalize_risk_level(risk_level_raw)
@@ -113,7 +217,9 @@ def parse_module_output(raw: str, module: str = "") -> list[AuditRecord]:
         risk_description = str(item.get("risk_description", ""))
         suggestion = str(item.get("suggestion", ""))
 
-        refs = _extract_refs(risk_description)
+        evidence_spans = _normalize_evidence_spans(item.get("evidence_spans"))
+        span_refs = _refs_from_evidence_spans(evidence_spans)
+        refs = _merge_ref_dicts(_extract_refs(risk_description), span_refs)
 
         records.append(
             AuditRecord(
@@ -129,6 +235,7 @@ def parse_module_output(raw: str, module: str = "") -> list[AuditRecord]:
                 risk_description=risk_description,
                 suggestion=suggestion,
                 refs=refs,
+                evidence_spans=evidence_spans,
             )
         )
 

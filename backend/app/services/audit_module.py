@@ -1,12 +1,16 @@
 """方案B：模块级审核服务 — 单模块调用 + 全量并行调用"""
 import asyncio
+import logging
 from typing import Any, Optional
 
+from app.config import settings
 from app.data.rules_data import MODULES, get_rules_by_module
 from app.models.schemas import AuditRecord
 from app.services.agent import run_module_audit_sync
 from app.services.output_parser import parse_module_output
 from app.services.slicer import slice_contract
+
+logger = logging.getLogger(__name__)
 
 
 def _run_module_single(
@@ -22,11 +26,19 @@ def _run_module_single(
     if not rules:
         return [], ""
 
-    chunks = slice_contract(contract_text, chunk_size=300, overlap=10)
+    chunks = slice_contract(
+        contract_text,
+        chunk_size=settings.audit_chunk_size,
+        overlap=settings.audit_chunk_overlap,
+    )
 
     if len(chunks) <= 1:
         raw = run_module_audit_sync(contract_text, module, rules, company)
         records = parse_module_output(raw, module)
+        if not raw.strip():
+            logger.warning("[%s] LLM 返回空内容", module)
+        elif not records:
+            logger.warning("[%s] 解析出 0 条记录, raw_len=%d, tail=%.200s", module, len(raw), raw[-200:])
         return records, raw
 
     all_records: list[AuditRecord] = []
@@ -35,6 +47,13 @@ def _run_module_single(
     for i, chunk in enumerate(chunks):
         raw = run_module_audit_sync(chunk.chunk_text, module, rules, company)
         records = parse_module_output(raw, module)
+        if not raw.strip():
+            logger.warning("[%s] chunk %d/%d LLM 返回空内容", module, i + 1, len(chunks))
+        elif not records:
+            logger.warning(
+                "[%s] chunk %d/%d 解析出 0 条记录, raw_len=%d, tail=%.200s",
+                module, i + 1, len(chunks), len(raw), raw[-200:],
+            )
         all_records.extend(records)
         raw_parts.append(f"# Chunk {i+1}/{len(chunks)} (段落 {chunk.start_id}-{chunk.end_id})\n{raw}")
 
@@ -109,6 +128,7 @@ async def run_full_audit(
 
     for module_name, result in zip(target_modules, results):
         if isinstance(result, Exception):
+            logger.error("[%s] 模块审核异常: %s", module_name, result)
             module_records[module_name] = []
             raw_parts.append(f"# {module_name}\n[ERROR] {str(result)}")
             continue

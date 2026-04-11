@@ -109,13 +109,9 @@
   transition: background 0.15s;
 }
 
-.original-text-panel .para:hover {
-  background: #fff;
-}
-
 .original-text-panel .para-covered {
-  background: #f0fdf4;
-  border-left: 2px solid #bbf7d0;
+  background: #dcfce7;
+  border-left: 3px solid #86efac;
 }
 
 .original-text-panel .para-highlight {

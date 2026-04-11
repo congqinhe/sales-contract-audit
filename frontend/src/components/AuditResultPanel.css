@@ -49,6 +49,11 @@
   color: #065f46;
 }
 
+.audit-result-panel .badge-identify-only {
+  background: #e5e7eb;
+  color: #374151;
+}
+
 .audit-result-panel .records {
   flex: 1;
   overflow-y: auto;

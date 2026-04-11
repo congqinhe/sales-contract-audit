@@ -1,4 +1,6 @@
 """切片审核：将长合同分段调用大模型，合并结果"""
+from typing import Set, Tuple, Union
+
 from app.models.schemas import AuditRecord
 from app.services.agent import run_audit
 from app.services.slicer import slice_contract, SliceChunk
@@ -15,7 +17,7 @@ def _merge_records(all_records: list[list[AuditRecord]]) -> list[AuditRecord]:
     - 同一 risk_element 下，有实际段落引用的记录优先，去掉重复的「未找到」
     - 按 (risk_element, para_start, para_end) 去重
     """
-    seen: set[tuple[str, str | int, str | int]] = set()
+    seen: Set[Tuple[str, Union[str, int], Union[str, int]]] = set()
     merged: list[AuditRecord] = []
     # 按 risk_element 分组，先收集有实际引用的，再处理「未找到」
     by_element: dict[str, list[AuditRecord]] = {}

@@ -57,6 +57,10 @@ class AuditRecord(BaseModel):
     refs: list[dict] = Field(
         default_factory=list, description='段落引用 [{"start": 46, "end": 51}]'
     )
+    evidence_spans: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="本规则关联的全部证据段落区间（可多项），与 paragraph 主引用配合用于防漏检",
+    )
 
 
 class ContractParseResult(BaseModel):

@@ -55,7 +55,7 @@ BUILTIN_RULES: list[RuleCreate] = [
         module="履约交付平台",
         review_point="运输方式",
         review_type="identify",
-        extraction_instruction="识别合同约定的运输方式：公路运输 / 铁路运输 / 水路运输 / 航空运输。如未约定，标注「未约定」。",
+        extraction_instruction="识别合同是否约定的运输方式：公路运输 / 铁路运输 / 水路运输 / 航空运输等，若有约定，约定的运输方式是什么。如未约定，标注「未约定」。",
     ),
     RuleCreate(
         rule_id="LD-04",

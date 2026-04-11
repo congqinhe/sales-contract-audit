@@ -10,6 +10,8 @@ from app.services.text_parser import parse_text, text_to_paragraphs
 
 router = APIRouter(prefix="/api/contract", tags=["contract"])
 
+_ALLOWED_TEXT_EXTENSIONS = frozenset({"txt", "md"})
+
 
 @router.post("/inspect")
 async def inspect_contract_text(contract_text: str = Form(...)):
@@ -37,21 +39,24 @@ async def parse_contract_text(
     """
     解析合同文本。支持：
     1. content: 直接粘贴的文本（带 <!-- N --> 格式）
-    2. file: 上传 TXT 文件
+    2. file: 上传 .txt 或 .md 文件（UTF-8，与粘贴内容格式相同）
     """
     text = None
     if content and content.strip():
         text = content.strip()
     elif file and file.filename:
-        file_ext = file.filename.lower().split(".")[-1]
-        if file_ext != "txt":
-            raise HTTPException(status_code=400, detail="仅支持 .txt 文件")
+        file_ext = file.filename.lower().rsplit(".", 1)[-1] if "." in file.filename else ""
+        if file_ext not in _ALLOWED_TEXT_EXTENSIONS:
+            raise HTTPException(
+                status_code=400,
+                detail="仅支持 .txt 或 .md 文件",
+            )
         file_bytes = await file.read()
         text = file_bytes.decode("utf-8", errors="ignore").strip()
     if not text:
         raise HTTPException(
             status_code=400,
-            detail="请粘贴合同文本或上传 TXT 文件",
+            detail="请粘贴合同文本或上传 .txt / .md 文件",
         )
 
     result = parse_text(text)
@@ -60,7 +65,7 @@ async def parse_contract_text(
     if len(result["paragraphs"]) == 0:
         raise HTTPException(
             status_code=400,
-            detail="未解析到有效段落，TXT 文件需包含 <!-- N --> 段落编号格式。",
+            detail="未解析到有效段落，文件需包含 <!-- N --> 段落编号格式。",
         )
     return {
         "paragraphs": result["paragraphs"],

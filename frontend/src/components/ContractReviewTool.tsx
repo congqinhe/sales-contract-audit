@@ -32,7 +32,7 @@ export function ContractReviewTool() {
   const [auditProgress, setAuditProgress] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [inputText, setInputText] = useState("");
-  const [inputSource, setInputSource] = useState<"paste" | "file">("paste");
+  const [inputSource, setInputSource] = useState<"paste" | "file">("file");
 
   useEffect(() => {
     listModules()
@@ -212,17 +212,17 @@ export function ContractReviewTool() {
           <div className="input-tabs">
             <button
               type="button"
-              className={`input-tab ${inputSource === "paste" ? "active" : ""}`}
-              onClick={() => setInputSource("paste")}
-            >
-              粘贴文本
-            </button>
-            <button
-              type="button"
               className={`input-tab ${inputSource === "file" ? "active" : ""}`}
               onClick={() => setInputSource("file")}
             >
               上传文件
+            </button>
+            <button
+              type="button"
+              className={`input-tab ${inputSource === "paste" ? "active" : ""}`}
+              onClick={() => setInputSource("paste")}
+            >
+              粘贴文本
             </button>
           </div>
           {inputSource === "paste" ? (
@@ -248,18 +248,18 @@ export function ContractReviewTool() {
           ) : (
             <div className="file-area">
               <label className="btn btn-upload">
-                选择 TXT 文件
+                选择 TXT / Markdown 文件
                 <input
                   id="file-input"
                   type="file"
-                  accept=".txt"
+                  accept=".txt,.md,text/plain,text/markdown"
                   onChange={handleParseFile}
                   disabled={loading}
                   hidden
                 />
               </label>
               <span className="file-hint">
-                支持 .txt 文件（需含 {"<!-- N -->"} 段落编号格式）
+                支持 .txt、.md（需含 {"<!-- N -->"} 段落编号格式）
               </span>
             </div>
           )}
