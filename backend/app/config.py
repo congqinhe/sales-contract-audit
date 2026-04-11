@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     openai_model: str = "deepseek-v3"
     upload_dir: str = "./uploads"
     # 切片审核参数（可通过 AUDIT_CHUNK_SIZE、AUDIT_CHUNK_OVERLAP 覆盖）
-    audit_chunk_size: int = 150
+    audit_chunk_size: int = 300
     audit_chunk_overlap: int = 10
 
     class Config:

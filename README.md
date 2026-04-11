@@ -66,7 +66,7 @@ npm run dev
 | `OPENAI_API_KEY` | 大模型 API 密钥（OpenAI 兼容接口） |
 | `OPENAI_BASE_URL` | 接口根地址，需带路径前缀（如厂商要求 `/api` 则一并写入） |
 | `OPENAI_MODEL` | 模型名称，与网关或厂商文档一致 |
-| `AUDIT_CHUNK_SIZE` | 可选。长合同按段落切片审核时，每段包含的段落数上限；不设则默认 `150` |
+| `AUDIT_CHUNK_SIZE` | 可选。长合同按段落切片审核时，每段包含的段落数上限；不设则默认 `300` |
 | `AUDIT_CHUNK_OVERLAP` | 可选。相邻切片重叠段落数，利于跨段条款；不设则默认 `10` |
 
 示例（占位值请替换为实际配置）：
@@ -75,7 +75,7 @@ npm run dev
 OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxx
 OPENAI_BASE_URL=https://example.com/api
 OPENAI_MODEL=deepseek-v3
-# AUDIT_CHUNK_SIZE=150
+# AUDIT_CHUNK_SIZE=300
 # AUDIT_CHUNK_OVERLAP=10
 ```
 
