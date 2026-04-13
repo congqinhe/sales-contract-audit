@@ -13,6 +13,10 @@ class RuleCreate(BaseModel):
     review_type: Literal["identify", "judge", "verify"] = Field(
         ..., description="评审类型：identify=识别提取, judge=判定风险, verify=数值核对"
     )
+    shared_modules: list[str] = Field(
+        default_factory=list,
+        description="规则共享到的其他模块（除 module 主模块外），支持一条规则在多个模块中展示",
+    )
     applies_to: Optional[str] = Field(
         default=None, description="适用产业公司：低压/诺雅克/输配电, None=通用"
     )

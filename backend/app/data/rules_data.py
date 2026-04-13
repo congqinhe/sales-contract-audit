@@ -16,7 +16,31 @@ MODULES = [
 
 BUILTIN_RULES: list[RuleCreate] = [
     # ======================================================================
-    # 一、履约交付平台（12 条）
+    # 〇、跨模块共享规则
+    # ======================================================================
+    RuleCreate(
+        rule_id="CMN-01",
+        module="履约交付平台",
+        shared_modules=["财务部", "法务部"],
+        review_point="金额核对",
+        review_type="verify",
+        extraction_instruction=(
+            "1. 提取标的物单价、数量、金额（分项明细，文本或表格形式，位于正文或附件清单）。\n"
+            "2. 提取税率、税金。\n"
+            "3. 提取合同总价（含税总价、不含税总价）。\n"
+            "4. 提取大写金额与小写金额。"
+        ),
+        risk_criteria=(
+            "1. 单价 × 数量 ≠ 分项金额 → 有风险。\n"
+            "2. 分项金额合计 ≠ 合同总金额 → 有风险。\n"
+            "3. 不含税金额 + 税金 ≠ 含税金额 → 有风险。\n"
+            "4. 大写金额与小写金额不一致 → 有风险。\n"
+            "5. 价税基本信息（单价/数量/金额/税率/税金/总价）缺失 → 有风险。"
+        ),
+    ),
+
+    # ======================================================================
+    # 一、履约交付平台（11 条）
     # ======================================================================
     RuleCreate(
         rule_id="LD-01",
@@ -25,7 +49,7 @@ BUILTIN_RULES: list[RuleCreate] = [
         review_type="judge",
         extraction_instruction=(
             "1. 提取标的物产品名称、产品型号、数量。\n"
-            "2. 提取合同约定的交货期/交货天数，识别交货起算条件：\n"
+            "2. 提取合同约定的交货期/交货天数（到货期、交付日期都是交货期），识别交货起算条件：\n"
             "   - 合同生效后\n"
             "   - 卖方收到预付款和交货款后\n"
             "   - 双方对技术规范确认后\n"
@@ -54,8 +78,9 @@ BUILTIN_RULES: list[RuleCreate] = [
         rule_id="LD-03",
         module="履约交付平台",
         review_point="运输方式",
-        review_type="identify",
-        extraction_instruction="识别合同是否约定的运输方式：公路运输 / 铁路运输 / 水路运输 / 航空运输等，若有约定，约定的运输方式是什么。如未约定，标注「未约定」。",
+        review_type="judge",
+        extraction_instruction=("识别合同是否约定的运输方式：公路运输 / 铁路运输 / 水路运输 / 航空运输等，若有约定，约定的运输方式是什么。如未约定，标注「未约定」。"),
+         risk_criteria="航空运输→有风险。" ,
     ),
     RuleCreate(
         rule_id="LD-04",
@@ -73,7 +98,6 @@ BUILTIN_RULES: list[RuleCreate] = [
             "1. 未约定车板交货、主变基础交货、主变基础就位中的任何一个。\n"
             "2. 乙方/卖方承担卸货。"
         ),
-        risk_exclusion="约定车板交货、主变基础交货、主变基础就位中任意一个即为无风险。",
     ),
     RuleCreate(
         rule_id="LD-05",
@@ -157,21 +181,6 @@ BUILTIN_RULES: list[RuleCreate] = [
             "- 「开箱验收」是闭口。"
         ),
     ),
-    RuleCreate(
-        rule_id="LD-10",
-        module="履约交付平台",
-        review_point="金额核对",
-        review_type="verify",
-        extraction_instruction=(
-            "1. 提取产品分项金额（文本形式或表格形式，位于正文或附件清单）。\n"
-            "2. 提取合同总金额（大写和小写）。"
-        ),
-        risk_criteria=(
-            "1. 分项金额合计 ≠ 合同总金额 → 有风险。\n"
-            "2. 大写金额与小写金额不一致 → 有风险。"
-        ),
-    ),
-
     # ======================================================================
     # 二、知识产权部（3 条）
     # ======================================================================
@@ -219,7 +228,7 @@ BUILTIN_RULES: list[RuleCreate] = [
     ),
 
     # ======================================================================
-    # 三、财务部（10 条）
+    # 三、财务部（8 条 + 共享 CMN-01）
     # ======================================================================
     RuleCreate(
         rule_id="FN-01",
@@ -312,17 +321,6 @@ BUILTIN_RULES: list[RuleCreate] = [
         risk_criteria="未约定违约/违约金/违约处罚提供票据 → 有风险。发票类型仅识别，不判定风险。",
     ),
     RuleCreate(
-        rule_id="FN-07",
-        module="财务部",
-        review_point="金额核对",
-        review_type="verify",
-        extraction_instruction=(
-            "1. 提取产品分项金额（正文/附件，文本/表格形式）。\n"
-            "2. 提取合同总金额（大写+小写）。"
-        ),
-        risk_criteria="分项合计≠总价 或 大小写不一致 → 有风险。",
-    ),
-    RuleCreate(
         rule_id="FN-08",
         module="财务部",
         review_point="保函",
@@ -365,14 +363,14 @@ BUILTIN_RULES: list[RuleCreate] = [
             "- 出口管制条款（贸易合规、美国出口管制、技术管制、跨境转移限制）\n"
             "- 反洗钱条款\n"
             "- 利益冲突条款（关联交易披露、回避）\n"
-            "识别合同是否违背《正泰集团诚信合规商业行为准则》。\n"
             "识别合规条款的违约责任是否过重。"
         ),
         risk_criteria=(
-            "1. 条款违背正泰诚信合规要求 → 有风险。\n"
+            "1. 条款违背正泰诚信合规要求（参考《正泰集团诚信合规商业行为准则》） → 有风险。\n"
             "2. 合规条款违约责任过重 → 有风险。\n"
             "3. 存在审计条款 → 需提示。"
         ),
+         notes="需人工与《正泰集团诚信合规商业行为准则》进行核对，标注 needs_manual_review",
     ),
     RuleCreate(
         rule_id="CP-03",
@@ -470,7 +468,7 @@ BUILTIN_RULES: list[RuleCreate] = [
     ),
 
     # ======================================================================
-    # 六、法务部（13 条）
+    # 六、法务部（12 条 + 共享 CMN-01）
     # ======================================================================
     RuleCreate(
         rule_id="LG-01",
@@ -544,20 +542,6 @@ BUILTIN_RULES: list[RuleCreate] = [
             "提取「未按约履行视为验收合格」的默认条款。"
         ),
         risk_criteria="未约定验收期限或验收标准 → 有风险。",
-    ),
-    RuleCreate(
-        rule_id="LG-06",
-        module="法务部",
-        review_point="合同基本信息",
-        review_type="verify",
-        extraction_instruction=(
-            "1. 提取标的物单价、金额、数量、总价、税金、税率。\n"
-            "2. 比对大小写金额、分项合计与总价。"
-        ),
-        risk_criteria=(
-            "1. 基本信息缺失 → 有风险。\n"
-            "2. 金额不一致 → 有风险。"
-        ),
     ),
     RuleCreate(
         rule_id="LG-07",
@@ -667,10 +651,11 @@ BUILTIN_RULES: list[RuleCreate] = [
 def get_rules_by_module(
     module: str, company: Optional[str] = None
 ) -> list[RuleCreate]:
-    """按模块 + 产业公司筛选规则。company=None 时返回所有通用规则及该模块全部规则。"""
+    """按模块 + 产业公司筛选规则。company=None 时返回所有通用规则及该模块全部规则。
+    支持 shared_modules：规则的主模块或共享模块匹配即返回。"""
     results = []
     for r in BUILTIN_RULES:
-        if r.module != module:
+        if r.module != module and module not in r.shared_modules:
             continue
         if r.applies_to is not None and company is not None and r.applies_to != company:
             continue
