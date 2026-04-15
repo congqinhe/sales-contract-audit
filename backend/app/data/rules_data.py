@@ -595,8 +595,8 @@ BUILTIN_RULES: list[RuleCreate] = [
         review_point="附件核对",
         review_type="verify",
         extraction_instruction=(
-            "1. 提取合同正文中引用的附件序号和名称。\n"
-            "2. 核对实际附件是否齐全、序号是否一致。"
+            "1. 提取合同正文中提到但未提供全文的附件序号和名称。\n"
+            "2. 核对下文实际提供全文的附件是否齐全、序号是否一致。"
         ),
         risk_criteria="正文引用与实际附件不一致或附件不齐全 → 有风险。",
     ),
